@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文字雲資料表格</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      padding: 30px 20px;
+      color: #fff;
+    }
+    h1 { font-size: 1.6rem; margin-bottom: 6px; text-align: center; }
+    .subtitle { color: rgba(255,255,255,0.5); font-size: 0.85rem; text-align: center; margin-bottom: 24px; }
+    .stats {
+      display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 24px;
+    }
+    .stat {
+      background: rgba(255,255,255,0.08);
+      border-radius: 12px; padding: 12px 24px; text-align: center;
+    }
+    .stat-num { font-size: 1.8rem; font-weight: 700; color: #e94560; }
+    .stat-label { font-size: 0.75rem; color: rgba(255,255,255,0.5); }
+    .controls {
+      display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px;
+    }
+    button {
+      padding: 10px 20px; border: none; border-radius: 10px;
+      font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s;
+    }
+    .btn-refresh { background: #e94560; color: #fff; }
+    .btn-export { background: #22c55e; color: #fff; }
+    .btn-clear { background: rgba(255,255,255,0.1); color: #fff; }
+    button:hover { opacity: 0.85; }
+    .search-wrap { display: flex; justify-content: center; margin-bottom: 16px; }
+    input[type="text"] {
+      padding: 10px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.08); color: #fff; font-size: 0.9rem;
+      outline: none; width: 100%; max-width: 320px;
+    }
+    input::placeholder { color: rgba(255,255,255,0.3); }
+    .table-wrap {
+      max-width: 800px; margin: 0 auto;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px; overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      background: rgba(255,255,255,0.1);
+      padding: 14px 16px; text-align: left;
+      font-size: 0.8rem; color: rgba(255,255,255,0.6);
+      letter-spacing: 0.05em; text-transform: uppercase;
+    }
+    td {
+      padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.06);
+      font-size: 0.95rem;
+    }
+    tr:hover td { background: rgba(255,255,255,0.04); }
+    .word-cell { font-weight: 700; color: #e94560; font-size: 1.1rem; }
+    .rank { color: rgba(255,255,255,0.3); font-size: 0.85rem; }
+    .badge {
+      display: inline-block; padding: 3px 10px; border-radius: 99px;
+      font-size: 0.8rem; font-weight: 700;
+    }
+    .time-cell { color: rgba(255,255,255,0.45); font-size: 0.8rem; }
+    .empty { text-align: center; padding: 48px; color: rgba(255,255,255,0.4); }
+    .nav { text-align: center; margin-top: 20px; }
+    .nav a { color: rgba(255,255,255,0.4); font-size: 0.85rem; text-decoration: none; margin: 0 10px; }
+    .nav a:hover { color: #fff; }
+    .tab-wrap { display: flex; justify-content: center; gap: 8px; margin-bottom: 20px; }
+    .tab {
+      padding: 8px 20px; border-radius: 99px; font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; border: none; transition: all 0.2s;
+    }
+    .tab.active { background: #e94560; color: #fff; }
+    .tab:not(.active) { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); }
+  </style>
+</head>
+<body>
+  <h1>📋 文字雲資料表</h1>
+  <p class="subtitle" id="updateTime">載入中...</p>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-num" id="totalCount">-</div>
+      <div class="stat-label">總筆數</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="uniqueCount">-</div>
+      <div class="stat-label">不重複關鍵字</div>
+    </div>
+  </div>
+
+  <div class="tab-wrap">
+    <button class="tab active" onclick="switchTab('all')">📝 所有記錄</button>
+    <button class="tab" onclick="switchTab('summary')">📊 統計彙整</button>
+  </div>
+
+  <div class="search-wrap">
+    <input type="text" id="searchInput" placeholder="搜尋關鍵字..." oninput="renderTable()">
+  </div>
+
+  <div class="controls">
+    <button class="btn-refresh" onclick="location.reload()">🔄 重新整理</button>
+    <button class="btn-export" onclick="exportCSV()">⬇️ 匯出 CSV</button>
+  </div>
+
+  <div class="table-wrap">
+    <div class="empty" id="loadingMsg">⏳ 載入中...</div>
+    <table id="dataTable" style="display:none">
+      <thead id="tableHead"></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="nav">
+    <a href="index.html">✏️ 提交關鍵字</a>
+    <a href="display.html">☁️ 文字雲展示</a>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy }
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBfmiNqfe_HmH9AHY9Uo2Ngvq49AulM6EE",
+      authDomain: "test-53f48.firebaseapp.com",
+      projectId: "test-53f48",
+      storageBucket: "test-53f48.firebasestorage.app",
+      messagingSenderId: "261734973548",
+      appId: "1:261734973548:web:66b955eb80c60ad9381849"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    let allDocs = [];
+    let currentTab = 'all';
+    const colors = ['#e94560','#f97316','#eab308','#22c55e','#06b6d4','#8b5cf6','#ec4899'];
+
+    onSnapshot(query(collection(db, "wordcloud_words"), orderBy("created_at", "desc")), snap => {
+      allDocs = [];
+      snap.forEach(doc => {
+        const d = doc.data();
+        allDocs.push({ word: d.word || '', time: d.created_at?.toDate() || null });
+      });
+      document.getElementById('totalCount').textContent = allDocs.length;
+      const unique = new Set(allDocs.map(d => d.word)).size;
+      document.getElementById('uniqueCount').textContent = unique;
+      document.getElementById('updateTime').textContent =
+        `最後更新：${new Date().toLocaleTimeString('zh-TW')}`;
+      window.renderTable();
+    });
+
+    window.currentTab = 'all';
+    window.switchTab = function(tab) {
+      window.currentTab = tab;
+      document.querySelectorAll('.tab').forEach((el, i) => {
+        el.classList.toggle('active', (i === 0 && tab === 'all') || (i === 1 && tab === 'summary'));
+      });
+      window.renderTable();
+    };
+
+    window.renderTable = function() {
+      const q = document.getElementById('searchInput').value.trim().toLowerCase();
+      const loading = document.getElementById('loadingMsg');
+      const table = document.getElementById('dataTable');
+      const head = document.getElementById('tableHead');
+      const body = document.getElementById('tableBody');
+
+      if (allDocs.length === 0) {
+        loading.textContent = '還沒有資料';
+        table.style.display = 'none';
+        return;
+      }
+      loading.style.display = 'none';
+      table.style.display = 'table';
+
+      if (window.currentTab === 'all') {
+        head.innerHTML = `<tr><th>#</th><th>關鍵字</th><th>提交時間</th></tr>`;
+        const rows = allDocs.filter(d => !q || d.word.toLowerCase().includes(q));
+        body.innerHTML = rows.length === 0
+          ? `<tr><td colspan="3" class="empty">找不到「${q}」</td></tr>`
+          : rows.map((d, i) => `
+            <tr>
+              <td class="rank">${i + 1}</td>
+              <td class="word-cell">${d.word}</td>
+              <td class="time-cell">${d.time ? d.time.toLocaleString('zh-TW') : '-'}</td>
+            </tr>`).join('');
+      } else {
+        // 統計模式
+        const map = {};
+        allDocs.forEach(d => { if (d.word) map[d.word] = (map[d.word] || 0) + 1; });
+        const entries = Object.entries(map).sort((a, b) => b[1] - a[1])
+          .filter(([w]) => !q || w.toLowerCase().includes(q));
+        head.innerHTML = `<tr><th>排名</th><th>關鍵字</th><th>出現次數</th><th>佔比</th></tr>`;
+        const total = allDocs.length;
+        body.innerHTML = entries.length === 0
+          ? `<tr><td colspan="4" class="empty">找不到「${q}」</td></tr>`
+          : entries.map(([w, c], i) => {
+              const color = colors[i % colors.length];
+              const pct = ((c / total) * 100).toFixed(1);
+              return `<tr>
+                <td class="rank">${i + 1}</td>
+                <td class="word-cell">${w}</td>
+                <td><span class="badge" style="background:${color}22;color:${color}">${c} 次</span></td>
+                <td style="color:rgba(255,255,255,0.5)">${pct}%</td>
+              </tr>`;
+            }).join('');
+      }
+    };
+
+    window.exportCSV = function() {
+      const rows = window.currentTab === 'all'
+        ? [['#','關鍵字','提交時間'], ...allDocs.map((d,i) =>
+            [i+1, d.word, d.time ? d.time.toLocaleString('zh-TW') : ''])]
+        : (() => {
+            const map = {};
+            allDocs.forEach(d => { map[d.word] = (map[d.word]||0)+1; });
+            return [['排名','關鍵字','次數'],
+              ...Object.entries(map).sort((a,b)=>b[1]-a[1]).map(([w,c],i)=>[i+1,w,c])];
+          })();
+      const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+      const a = document.createElement('a');
+      a.href = 'data:text/csv;charset=utf-8,﻿' + encodeURIComponent(csv);
+      a.download = `wordcloud_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+    };
+  </script>
+</body>
+</html>
