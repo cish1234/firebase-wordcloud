@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文字雲 - 提交關鍵字</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 24px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 480px;
+      text-align: center;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+    }
+    h1 { color: #fff; font-size: 1.8rem; margin-bottom: 8px; }
+    .subtitle { color: rgba(255,255,255,0.6); font-size: 0.95rem; margin-bottom: 36px; }
+    input {
+      width: 100%;
+      padding: 16px 20px;
+      font-size: 1.1rem;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      outline: none;
+      transition: border-color 0.3s;
+      margin-bottom: 16px;
+    }
+    input::placeholder { color: rgba(255,255,255,0.4); }
+    input:focus { border-color: #e94560; }
+    button {
+      width: 100%;
+      padding: 16px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #e94560, #0f3460);
+      color: #fff;
+      cursor: pointer;
+      transition: transform 0.2s, opacity 0.2s;
+    }
+    button:hover { transform: translateY(-2px); opacity: 0.9; }
+    button:active { transform: translateY(0); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .msg {
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      display: none;
+    }
+    .msg.success { background: rgba(34,197,94,0.2); color: #86efac; display: block; }
+    .msg.error { background: rgba(239,68,68,0.2); color: #fca5a5; display: block; }
+    .link { margin-top: 24px; }
+    .link a { color: rgba(255,255,255,0.5); font-size: 0.85rem; text-decoration: none; }
+    .link a:hover { color: #fff; }
+    .count { color: rgba(255,255,255,0.4); font-size: 0.8rem; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>💬 文字雲</h1>
+    <p class="subtitle">輸入一個你想說的關鍵字</p>
+    <input type="text" id="wordInput" placeholder="輸入關鍵字..." maxlength="20" autofocus>
+    <button id="submitBtn" onclick="submitWord()">送出</button>
+    <div class="msg" id="msg"></div>
+    <div class="count" id="count"></div>
+    <div class="link"><a href="display.html" target="_blank">📊 查看文字雲展示頁 →</a></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, serverTimestamp }
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBfmiNqfe_HmH9AHY9Uo2Ngvq49AulM6EE",
+      authDomain: "test-53f48.firebaseapp.com",
+      projectId: "test-53f48",
+      storageBucket: "test-53f48.firebasestorage.app",
+      messagingSenderId: "261734973548",
+      appId: "1:261734973548:web:66b955eb80c60ad9381849"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function updateCount() {
+      try {
+        const snap = await getDocs(collection(db, "wordcloud_words"));
+        document.getElementById('count').textContent = `目前已有 ${snap.size} 則關鍵字`;
+      } catch(e) {}
+    }
+    updateCount();
+
+    window.submitWord = async function() {
+      const input = document.getElementById('wordInput');
+      const word = input.value.trim();
+      const btn = document.getElementById('submitBtn');
+      const msg = document.getElementById('msg');
+
+      if (!word) { showMsg('請輸入關鍵字！', 'error'); return; }
+
+      btn.disabled = true;
+      btn.textContent = '送出中...';
+      try {
+        await addDoc(collection(db, "wordcloud_words"), {
+          word: word,
+          created_at: serverTimestamp()
+        });
+        showMsg(`「${word}」已送出！`, 'success');
+        input.value = '';
+        updateCount();
+      } catch(e) {
+        showMsg('送出失敗，請稍後再試', 'error');
+        console.error(e);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '送出';
+      }
+    };
+
+    function showMsg(text, type) {
+      const msg = document.getElementById('msg');
+      msg.textContent = text;
+      msg.className = 'msg ' + type;
+      setTimeout(() => { msg.className = 'msg'; }, 3000);
+    }
+
+    document.getElementById('wordInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') window.submitWord();
+    });
+  </script>
+</body>
+</html>

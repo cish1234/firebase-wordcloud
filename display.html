@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文字雲展示</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.2.2/wordcloud2.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 20px;
+      color: #fff;
+    }
+    h1 { font-size: 2rem; margin-bottom: 6px; }
+    .subtitle { color: rgba(255,255,255,0.5); font-size: 0.9rem; margin-bottom: 24px; }
+    #canvas-wrap {
+      width: 100%;
+      max-width: 900px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 24px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    canvas { display: block; width: 100% !important; }
+    .stats {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .stat {
+      background: rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 14px 24px;
+      text-align: center;
+    }
+    .stat-num { font-size: 2rem; font-weight: 700; color: #e94560; }
+    .stat-label { font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-top: 4px; }
+    .top-words {
+      width: 100%;
+      max-width: 900px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 20px 24px;
+      margin-bottom: 20px;
+    }
+    .top-words h3 { font-size: 0.9rem; color: rgba(255,255,255,0.5); margin-bottom: 14px; }
+    .word-tags { display: flex; flex-wrap: wrap; gap: 10px; }
+    .tag {
+      padding: 6px 16px;
+      border-radius: 99px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .controls { display: flex; gap: 12px; }
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-refresh { background: #e94560; color: #fff; }
+    .btn-back { background: rgba(255,255,255,0.1); color: #fff; }
+    button:hover { opacity: 0.85; }
+    .loading { color: rgba(255,255,255,0.5); font-size: 1rem; padding: 60px; }
+  </style>
+</head>
+<body>
+  <h1>☁️ 文字雲</h1>
+  <p class="subtitle" id="lastUpdate">載入中...</p>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-num" id="totalCount">-</div>
+      <div class="stat-label">總提交數</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="uniqueCount">-</div>
+      <div class="stat-label">不重複關鍵字</div>
+    </div>
+  </div>
+
+  <div id="canvas-wrap">
+    <div class="loading" id="loadingMsg">⏳ 載入資料中...</div>
+    <canvas id="wordcloud" width="900" height="500" style="display:none"></canvas>
+  </div>
+
+  <div class="top-words">
+    <h3>🔥 熱門關鍵字</h3>
+    <div class="word-tags" id="topWords"></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn-refresh" onclick="loadData()">🔄 重新整理</button>
+    <button class="btn-back" onclick="location.href='index.html'">✏️ 提交關鍵字</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, onSnapshot }
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBfmiNqfe_HmH9AHY9Uo2Ngvq49AulM6EE",
+      authDomain: "test-53f48.firebaseapp.com",
+      projectId: "test-53f48",
+      storageBucket: "test-53f48.firebasestorage.app",
+      messagingSenderId: "261734973548",
+      appId: "1:261734973548:web:66b955eb80c60ad9381849"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const colors = ['#e94560','#f97316','#eab308','#22c55e','#06b6d4','#8b5cf6','#ec4899','#14b8a6'];
+
+    function renderCloud(wordMap) {
+      const canvas = document.getElementById('wordcloud');
+      const loading = document.getElementById('loadingMsg');
+      const entries = Object.entries(wordMap).sort((a,b) => b[1]-a[1]);
+
+      if (entries.length === 0) {
+        loading.textContent = '目前還沒有資料，去提交第一個關鍵字吧！';
+        canvas.style.display = 'none';
+        return;
+      }
+
+      loading.style.display = 'none';
+      canvas.style.display = 'block';
+
+      const maxCount = entries[0][1];
+      const list = entries.map(([w, c]) => [w, Math.max(18, Math.round(c / maxCount * 80))]);
+
+      WordCloud(canvas, {
+        list,
+        gridSize: 12,
+        weightFactor: 1,
+        fontFamily: 'Noto Sans TC, sans-serif',
+        color: () => colors[Math.floor(Math.random() * colors.length)],
+        rotateRatio: 0.3,
+        backgroundColor: 'transparent',
+        drawOutOfBound: false,
+        shrinkToFit: true,
+      });
+
+      // 統計
+      const total = Object.values(wordMap).reduce((a,b) => a+b, 0);
+      document.getElementById('totalCount').textContent = total;
+      document.getElementById('uniqueCount').textContent = entries.length;
+
+      // 熱門標籤
+      const topEl = document.getElementById('topWords');
+      topEl.innerHTML = entries.slice(0, 10).map(([w, c], i) => {
+        const color = colors[i % colors.length];
+        return `<span class="tag" style="background:${color}22;color:${color};border:1px solid ${color}55">${w} <b>${c}</b></span>`;
+      }).join('');
+
+      document.getElementById('lastUpdate').textContent =
+        `最後更新：${new Date().toLocaleTimeString('zh-TW')}`;
+    }
+
+    // 即時監聽（onSnapshot）
+    onSnapshot(collection(db, "wordcloud_words"), (snap) => {
+      const wordMap = {};
+      snap.forEach(doc => {
+        const w = (doc.data().word || '').trim();
+        if (w) wordMap[w] = (wordMap[w] || 0) + 1;
+      });
+      renderCloud(wordMap);
+    });
+
+    window.loadData = () => location.reload();
+  </script>
+</body>
+</html>
