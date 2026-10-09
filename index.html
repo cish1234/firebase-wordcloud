@@ -138,13 +138,13 @@
 <!-- Modal -->
 <div class="overlay" id="overlay" onclick="closeOnBg(event)">
   <div class="modal">
-    <h2>⚙️ Groq API Key 設定</h2>
-    <p>輸入您的 OpenAI API Key，即可啟用 AI 自動出題與即時問答功能。<br><br>Key 只儲存在您的瀏覽器 localStorage，不會傳送至任何伺服器。輸入後點「儲存並測試」會自動驗證連線。</p>
+    <h2>⚙️ API Key 設定</h2>
+    <p>輸入您的 <strong><a class="groq-link" href="https://console.groq.com/keys" target="_blank">Groq API Key</a></strong>（格式：gsk_...），即可使用 GPT-OSS 120B / 20B 等模型。<br><br>Key 只儲存在您的瀏覽器 localStorage，不會傳送至任何伺服器。</p>
     <div class="api-status">
       <div class="dot" id="apiDot"></div>
       <span id="apiStatusTxt">尚未設定</span>
     </div>
-    <input type="password" id="keyInput" placeholder="sk-..." autocomplete="off">
+    <input type="password" id="keyInput" placeholder="gsk_..." autocomplete="off">
     <label class="model-select-label">AI 模型</label>
     <select id="modalModelSelect" style="width:100%;margin-bottom:14px">
       <option value="openai/gpt-oss-120b" selected>GPT-OSS 120B（MoE 大模型）</option>
@@ -182,7 +182,7 @@ window.startQuiz=function(){
 function updateApiStatus(){
   const k=localStorage.getItem('groq_api_key');
   const dot=document.getElementById('apiDot');const txt=document.getElementById('apiStatusTxt');const fab=document.getElementById('fabBtn');
-  if(k&&(k.startsWith('sk-')||k.startsWith('gsk_'))){dot.className='dot set';txt.textContent='API Key 已設定 ✓';fab.className='fab set';}
+  if(k&&k.startsWith('gsk_')){dot.className='dot set';txt.textContent='API Key 已設定 ✓';fab.className='fab set';}
   else{dot.className='dot';txt.textContent='尚未設定 API Key';fab.className='fab';}
 }
 window.openModal=function(){
@@ -205,7 +205,7 @@ window.saveKey=async function(){
     resultDiv.style.color='var(--blue)';resultDiv.textContent='⏳ 正在測試連線...';
     try{
       const model=document.getElementById('modalModelSelect').value;
-      const res=await fetch('https://api.openai.com/v1/chat/completions',{
+      const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+v},
         body:JSON.stringify({model:model,messages:[{role:'user',content:'reply OK'}],max_tokens:5})
