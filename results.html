@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>測驗成績</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#0d1117;--card:#161b22;--card2:#1c2128;--blue:#58a6ff;--green:#3fb950;--red:#f85149;--purple:#bc8cff;--text:#e6edf3;--muted:#8b949e;--border:#30363d}
+    body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px 64px}
+    .result-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:40px 32px;width:100%;max-width:560px;text-align:center;margin-bottom:20px}
+    .grade-badge{display:inline-block;background:rgba(88,166,255,.12);border:1px solid rgba(88,166,255,.3);color:var(--blue);padding:4px 14px;border-radius:20px;font-size:.82rem;font-weight:700;margin-bottom:24px}
+    .score-ring-wrap{position:relative;width:160px;height:160px;margin:0 auto 28px}
+    .score-ring{transform:rotate(-90deg)}
+    .ring-bg{fill:none;stroke:var(--card2);stroke-width:12}
+    .ring-fill{fill:none;stroke-width:12;stroke-linecap:round;transition:stroke-dashoffset .8s cubic-bezier(.4,0,.2,1)}
+    .ring-text{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+    .ring-pct{font-size:2.4rem;font-weight:900;line-height:1}
+    .ring-label{font-size:.78rem;color:var(--muted);margin-top:2px}
+    .result-title{font-size:1.5rem;font-weight:900;margin-bottom:8px}
+    .result-sub{color:var(--muted);font-size:.9rem;margin-bottom:28px}
+    .data-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+    .data-box{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:16px}
+    .data-num{font-size:1.5rem;font-weight:900;margin-bottom:3px}
+    .data-lbl{font-size:.72rem;color:var(--muted)}
+    .comment-box{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:left;margin-bottom:24px}
+    .comment-title{font-size:.78rem;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+    .comment-text{font-size:.9rem;line-height:1.7}
+    .btn-row{display:flex;gap:12px;flex-wrap:wrap}
+    .btn{flex:1;min-width:140px;padding:14px;border-radius:12px;font-size:.95rem;font-weight:700;font-family:inherit;cursor:pointer;border:none;transition:opacity .15s}
+    .btn:hover{opacity:.85}
+    .btn-home{background:linear-gradient(135deg,#58a6ff,#1f6feb);color:#fff}
+    .btn-retry{background:var(--card2);border:1px solid var(--border);color:var(--text)}
+    .rank-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:560px}
+    .section-label{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:16px}
+    .rank-list{display:flex;flex-direction:column;gap:8px}
+    .rank-item{display:flex;align-items:center;gap:12px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 16px}
+    .rank-badge{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.82rem;flex-shrink:0}
+    .rank-1{background:linear-gradient(135deg,#FFD700,#FFA500);color:#000}
+    .rank-2{background:linear-gradient(135deg,#C0C0C0,#a0a0a0);color:#000}
+    .rank-3{background:linear-gradient(135deg,#CD7F32,#8B4513);color:#fff}
+    .rank-n{background:var(--border);color:var(--muted)}
+    .rank-grade{font-size:.82rem;color:var(--muted);flex:1}
+    .rank-score{font-weight:700;color:var(--green);font-size:.9rem}
+    .rank-time{font-size:.75rem;color:var(--muted)}
+    .rank-empty{color:var(--muted);font-size:.85rem;text-align:center;padding:20px}
+  </style>
+</head>
+<body>
+<div class="result-card">
+  <div class="grade-badge" id="gradeBadge">測驗完成</div>
+  <div class="score-ring-wrap">
+    <svg class="score-ring" viewBox="0 0 160 160" width="160" height="160">
+      <circle class="ring-bg" cx="80" cy="80" r="68"/>
+      <circle class="ring-fill" id="ringFill" cx="80" cy="80" r="68"/>
+    </svg>
+    <div class="ring-text">
+      <div class="ring-pct" id="ringPct">—</div>
+      <div class="ring-label">正確率</div>
+    </div>
+  </div>
+  <div class="result-title" id="resultTitle">🎉 測驗完成！</div>
+  <div class="result-sub" id="resultSub"></div>
+  <div class="data-row">
+    <div class="data-box"><div class="data-num" id="dScore" style="color:var(--green)">—</div><div class="data-lbl">答對題數</div></div>
+    <div class="data-box"><div class="data-num" id="dTotal" style="color:var(--blue)">—</div><div class="data-lbl">總題數</div></div>
+    <div class="data-box"><div class="data-num" id="dTime" style="color:var(--purple)">—</div><div class="data-lbl">作答時間</div></div>
+  </div>
+  <div class="comment-box">
+    <div class="comment-title">💬 AI 評語</div>
+    <div class="comment-text" id="commentText">分析中...</div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-home" onclick="location.href='index.html'">🏠 回首頁</button>
+    <button class="btn btn-retry" onclick="location.href='index.html'">🔄 再做一次</button>
+  </div>
+</div>
+<div class="rank-card">
+  <div class="section-label">🏆 近期最高成績</div>
+  <div class="rank-list" id="rankList"><div class="rank-empty">載入中...</div></div>
+</div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+const firebaseConfig={apiKey:"AIzaSyBfmiNqfe_HmH9AHY9Uo2Ngvq49AulM6EE",authDomain:"test-53f48.firebaseapp.com",projectId:"test-53f48",storageBucket:"test-53f48.firebasestorage.app",messagingSenderId:"261734973548",appId:"1:261734973548:web:66b955eb80c60ad9381849"};
+const app=initializeApp(firebaseConfig);const db=getFirestore(app);
+const p=new URLSearchParams(location.search);
+const SCORE=parseInt(p.get('score')||'0'),TOTAL=parseInt(p.get('total')||'10');
+const ELAPSED=parseInt(p.get('elapsed')||'0'),LABEL=p.get('label')||'未知';
+const ACCURACY=parseInt(p.get('accuracy')||'0');
+document.getElementById('gradeBadge').textContent=`${LABEL} 數學測驗`;
+document.getElementById('dScore').textContent=SCORE;
+document.getElementById('dTotal').textContent=TOTAL;
+const mm=String(Math.floor(ELAPSED/60)).padStart(2,'0'),ss=String(ELAPSED%60).padStart(2,'0');
+document.getElementById('dTime').textContent=`${mm}:${ss}`;
+let title,sub;
+if(ACCURACY>=90){title='🏆 太棒了！';sub='幾乎全對，數學功力一流！';}
+else if(ACCURACY>=70){title='🎉 做得好！';sub='大部分都答對了，繼續加油！';}
+else if(ACCURACY>=50){title='😊 還不錯！';sub='超過一半正確，多練習會更好！';}
+else{title='💪 繼續努力';sub='下次一定可以進步！';}
+document.getElementById('resultTitle').textContent=title;
+document.getElementById('resultSub').textContent=sub;
+const C=2*Math.PI*68;
+const rf=document.getElementById('ringFill');
+const clr=ACCURACY>=70?'#3fb950':ACCURACY>=50?'#d29922':'#f85149';
+rf.style.stroke=clr;rf.style.strokeDasharray=C;rf.style.strokeDashoffset=C;
+document.getElementById('ringPct').style.color=clr;
+document.getElementById('ringPct').textContent=ACCURACY+'%';
+setTimeout(()=>{rf.style.strokeDashoffset=C*(1-ACCURACY/100);},100);
+const comments={high:[`${LABEL}的題目對你輕而易舉！正確率${ACCURACY}%，數學基礎非常紮實，可以嘗試更高年級挑戰！`,`哇！${ACCURACY}%正確率，${LABEL}數學表現出色！建議可以挑戰更難的題目。`],mid:[`這次${LABEL}正確率${ACCURACY}%，很不錯！針對答錯的題目多加練習，下次可以突破80%！`,`正確率${ACCURACY}%，表現良好！有不熟的地方可以多問 AI 助教幫你解說。`],low:[`這次正確率${ACCURACY}%，沒關係！多利用 AI 助教功能，遇到不懂隨時發問，你一定能進步！`,`正確率${ACCURACY}%，${LABEL}某些概念需要加強。不要氣餒，多做幾次練習你一定能進步！`]};
+const pool=ACCURACY>=80?comments.high:ACCURACY>=50?comments.mid:comments.low;
+document.getElementById('commentText').textContent=pool[Math.floor(Math.random()*pool.length)];
+async function loadRank(){
+  try{
+    const q=query(collection(db,'quiz_results'),orderBy('accuracy','desc'),limit(10));
+    const snap=await getDocs(q);const list=document.getElementById('rankList');
+    if(snap.empty){list.innerHTML='<div class="rank-empty">尚無紀錄，你是第一個！</div>';return;}
+    list.innerHTML=snap.docs.map((doc,i)=>{
+      const d=doc.data();const r=i+1;
+      const bc=r===1?'rank-1':r===2?'rank-2':r===3?'rank-3':'rank-n';
+      const medal=r<=3?['🥇','🥈','🥉'][r-1]:r;
+      const e=d.elapsedSeconds||0;
+      const tm=String(Math.floor(e/60)).padStart(2,'0')+':'+String(e%60).padStart(2,'0');
+      const ts=d.timestamp?.toDate?.()?.toLocaleDateString('zh-TW')||'';
+      return `<div class="rank-item"><div class="rank-badge ${bc}">${medal}</div><div class="rank-grade">${d.gradeLabel||'—'} · ${d.correctCount||0}/${d.totalQuestions||0} 題</div><div class="rank-score">${d.accuracy||0}%</div><div class="rank-time">${tm} · ${ts}</div></div>`;
+    }).join('');
+  }catch(e){document.getElementById('rankList').innerHTML='<div class="rank-empty">載入失敗</div>';}
+}
+loadRank();
+</script>
+</body>
+</html>

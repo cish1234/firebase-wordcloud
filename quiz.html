@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>數學測驗中</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#0d1117;--card:#161b22;--card2:#1c2128;--blue:#58a6ff;--green:#3fb950;--red:#f85149;--yellow:#d29922;--purple:#bc8cff;--text:#e6edf3;--muted:#8b949e;--border:#30363d}
+    body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:grid;grid-template-columns:1fr 380px;grid-template-rows:auto 1fr;gap:0}
+    .topbar{grid-column:1/-1;display:flex;align-items:center;gap:16px;padding:14px 24px;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
+    .back-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:8px;font-family:inherit;cursor:pointer;font-size:.85rem}
+    .back-btn:hover{color:var(--text);border-color:var(--text)}
+    .topbar-title{font-weight:700;font-size:1rem}
+    .topbar-sub{color:var(--muted);font-size:.82rem}
+    .progress-wrap{flex:1;max-width:260px}
+    .progress-bar{height:6px;background:var(--card2);border-radius:3px;overflow:hidden;margin-top:4px}
+    .progress-fill{height:100%;background:linear-gradient(90deg,#58a6ff,#1f6feb);border-radius:3px;transition:width .4s}
+    .timer-badge{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:.88rem;color:var(--muted);margin-left:auto}
+    .timer-badge span{color:var(--text);font-weight:700}
+    .quiz-panel{padding:28px 24px 80px;overflow-y:auto}
+    .q-header{display:flex;align-items:baseline;gap:10px;margin-bottom:20px}
+    .q-num{font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+    .q-score-badge{font-size:.78rem;background:var(--card2);border:1px solid var(--border);padding:3px 10px;border-radius:20px;color:var(--green)}
+    .q-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;margin-bottom:20px}
+    .q-text{font-size:1.15rem;line-height:1.7;margin-bottom:24px;font-weight:500}
+    .math-expr{font-family:monospace;background:var(--card2);padding:2px 7px;border-radius:5px;font-size:1.05em;color:var(--blue)}
+    .options{display:grid;gap:10px}
+    .opt-btn{background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:14px 18px;text-align:left;color:var(--text);font-size:.95rem;font-family:inherit;cursor:pointer;transition:all .18s;display:flex;align-items:center;gap:12px}
+    .opt-btn:hover:not(:disabled){border-color:var(--blue);background:rgba(88,166,255,.07)}
+    .opt-btn.correct{border-color:var(--green)!important;background:rgba(63,185,80,.12)!important;color:var(--green)!important}
+    .opt-btn.wrong{border-color:var(--red)!important;background:rgba(248,81,73,.1)!important;color:var(--red)!important}
+    .opt-btn:disabled{cursor:default}
+    .opt-label{width:26px;height:26px;border-radius:50%;background:var(--card2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.82rem;flex-shrink:0}
+    .opt-btn.correct .opt-label{background:rgba(63,185,80,.3)}
+    .opt-btn.wrong .opt-label{background:rgba(248,81,73,.2)}
+    .explanation{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:16px;font-size:.9rem;line-height:1.7;display:none}
+    .explanation.show{display:block}
+    .exp-title{font-size:.78rem;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
+    .action-row{display:flex;gap:10px;margin-top:20px}
+    .next-btn{flex:1;padding:14px;background:linear-gradient(135deg,#58a6ff,#1f6feb);color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:700;font-family:inherit;cursor:pointer;transition:opacity .15s;display:none}
+    .next-btn:hover{opacity:.9}
+    .next-btn.show{display:block}
+    .loading-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;gap:16px}
+    .spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .loading-txt{color:var(--muted);font-size:.9rem}
+    .ai-panel{background:var(--card);border-left:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;overflow:hidden}
+    .ai-header{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0}
+    .ai-avatar{width:34px;height:34px;background:linear-gradient(135deg,#58a6ff,#1f6feb);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+    .ai-name{font-weight:700;font-size:.95rem}
+    .ai-model-tag{font-size:.72rem;background:rgba(88,166,255,.12);border:1px solid rgba(88,166,255,.3);color:var(--blue);padding:2px 8px;border-radius:20px;margin-left:auto}
+    .ai-no-key{padding:14px 16px;background:rgba(248,81,73,.08);border-bottom:1px solid rgba(248,81,73,.2);font-size:.8rem;color:#ffa198}
+    .ai-no-key a{color:var(--blue);text-decoration:none}
+    .ai-messages{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth}
+    .msg{max-width:90%;padding:10px 14px;border-radius:14px;font-size:.88rem;line-height:1.6}
+    .msg.ai{background:var(--card2);border:1px solid var(--border);align-self:flex-start;border-bottom-left-radius:4px}
+    .msg.user{background:rgba(88,166,255,.15);border:1px solid rgba(88,166,255,.25);align-self:flex-end;border-bottom-right-radius:4px}
+    .msg.typing{color:var(--muted)}
+    .msg-time{font-size:.7rem;color:var(--muted);margin-top:4px}
+    .ai-input-area{padding:12px 14px;border-top:1px solid var(--border);flex-shrink:0}
+    .ai-input-row{display:flex;gap:8px}
+    .ai-input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:.88rem;font-family:inherit;outline:none;resize:none;min-height:40px;line-height:1.4}
+    .ai-input:focus{border-color:var(--blue)}
+    .ai-send{width:40px;height:40px;background:var(--blue);border:none;border-radius:10px;color:#fff;font-size:1rem;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+    .ai-send:hover{opacity:.85}
+    .ai-send:disabled{opacity:.4;cursor:not-allowed}
+    .ai-quick-btns{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+    .quick-btn{background:var(--card2);border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:20px;font-size:.75rem;font-family:inherit;cursor:pointer;transition:all .15s}
+    .quick-btn:hover{border-color:var(--blue);color:var(--blue)}
+    @media(max-width:768px){
+      body{grid-template-columns:1fr;grid-template-rows:auto auto 1fr}
+      .ai-panel{position:fixed;bottom:0;left:0;right:0;height:50vh;border-left:none;border-top:1px solid var(--border);z-index:40}
+      .quiz-panel{padding-bottom:calc(50vh + 20px)}
+    }
+  </style>
+</head>
+<body>
+<div class="topbar">
+  <button class="back-btn" onclick="goHome()">← 返回</button>
+  <div>
+    <div class="topbar-title" id="quizTitle">載入中...</div>
+    <div class="topbar-sub" id="quizSub"></div>
+  </div>
+  <div class="progress-wrap">
+    <div style="font-size:.75rem;color:var(--muted)">進度 <span id="progTxt">0/0</span></div>
+    <div class="progress-bar"><div class="progress-fill" id="progFill" style="width:0%"></div></div>
+  </div>
+  <div class="timer-badge">⏱ <span id="timerSpan">00:00</span></div>
+</div>
+<div class="quiz-panel" id="quizPanel">
+  <div class="loading-wrap" id="loadingWrap">
+    <div class="spinner"></div>
+    <div class="loading-txt">AI 正在出題中，請稍候...</div>
+  </div>
+</div>
+<div class="ai-panel">
+  <div class="ai-header">
+    <div class="ai-avatar">🤖</div>
+    <div><div class="ai-name">AI 助教</div></div>
+    <div class="ai-model-tag" id="modelTag">Groq AI</div>
+  </div>
+  <div class="ai-no-key" id="noKeyBanner" style="display:none">
+    ⚠️ 未設定 Groq API Key，AI 功能停用。<br>
+    返回首頁點 ⚙️ 設定，或前往 <a href="https://console.groq.com/keys" target="_blank">console.groq.com</a> 取得免費 Key。
+  </div>
+  <div class="ai-messages" id="aiMessages"></div>
+  <div class="ai-input-area">
+    <div class="ai-quick-btns">
+      <button class="quick-btn" onclick="quickAsk('這題怎麼解？')">💡 怎麼解？</button>
+      <button class="quick-btn" onclick="quickAsk('幫我舉個例子')">📝 舉例子</button>
+      <button class="quick-btn" onclick="quickAsk('這個概念是什麼？')">📚 概念？</button>
+      <button class="quick-btn" onclick="quickAsk('答案為什麼是這個？')">🔍 為何是此答？</button>
+    </div>
+    <div class="ai-input-row">
+      <textarea class="ai-input" id="aiInput" placeholder="問 AI 任何問題..." rows="1" onkeydown="handleKey(event)"></textarea>
+      <button class="ai-send" id="aiSendBtn" onclick="sendToAI()">➤</button>
+    </div>
+  </div>
+</div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+const firebaseConfig={apiKey:"AIzaSyBfmiNqfe_HmH9AHY9Uo2Ngvq49AulM6EE",authDomain:"test-53f48.firebaseapp.com",projectId:"test-53f48",storageBucket:"test-53f48.firebasestorage.app",messagingSenderId:"261734973548",appId:"1:261734973548:web:66b955eb80c60ad9381849"};
+const app=initializeApp(firebaseConfig);const db=getFirestore(app);
+const params=new URLSearchParams(location.search);
+const GRADE=parseInt(params.get('grade')||'1');
+const LABEL=params.get('label')||'小一';
+const QTY=parseInt(params.get('qty')||'10');
+const MODEL=params.get('model')||'llama-3.3-70b-versatile';
+const GROQ_KEY=localStorage.getItem('groq_api_key')||'';
+let questions=[],current=0,score=0,answered=false,startTime=Date.now(),timerInterval,chatHistory=[];
+document.getElementById('quizTitle').textContent=`${LABEL} 數學測驗`;
+document.getElementById('quizSub').textContent=`共 ${QTY} 題`;
+const shortModel=MODEL.split('/').pop().replace(/-instruct|-versatile/g,'');
+document.getElementById('modelTag').textContent=shortModel;
+if(!GROQ_KEY)document.getElementById('noKeyBanner').style.display='block';
+timerInterval=setInterval(()=>{const sec=Math.floor((Date.now()-startTime)/1000);const m=String(Math.floor(sec/60)).padStart(2,'0');const s=String(sec%60).padStart(2,'0');document.getElementById('timerSpan').textContent=`${m}:${s}`;},1000);
+const CURRICULUM={1:'加減法（20以內），數數，形狀辨識',2:'加減法（100以內），乘法九九乘法表',3:'乘除法，分數入門，時間計算，面積周長',4:'分數加減，小數，因數倍數',5:'分數乘除，百分比，比與比值',6:'比例，統計圖表，圓面積，代數入門',7:'整數四則，有理數，一元一次方程式，幾何',8:'平方根，一次函數，聯立方程式',9:'二次方程式，三角函數，相似三角形',10:'多項式，指數對數，三角函數，排列組合',11:'微積分入門，向量，矩陣，機率',12:'積分應用，數列級數，複數'};
+async function generateQuestions(){
+  const topic=CURRICULUM[GRADE]||'基礎數學';
+  const prompt=`你是台灣數學老師。請為「${LABEL}」學生出 ${QTY} 道選擇題（4個選項）。\n課程範圍：${topic}\n要求：難度符合${LABEL}程度，每題一個正確答案，提供簡短解析。\n必須以純JSON陣列回覆，不加其他文字：\n[{"q":"題目","opts":["A. ...","B. ...","C. ...","D. ..."],"ans":"A","exp":"解析"}]`;
+  try{
+    let qs;
+    if(GROQ_KEY){
+      const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${GROQ_KEY}`},body:JSON.stringify({model:MODEL,messages:[{role:'user',content:prompt}],temperature:0.7,max_tokens:3000})});
+      const data=await res.json();
+      if(data.error)throw new Error(data.error.message);
+      const raw=data.choices[0].message.content;
+      const m=raw.match(/\[[\s\S]*\]/);
+      qs=JSON.parse(m[0]);
+    }else{qs=getLocalQuestions(GRADE,QTY);}
+    questions=qs.slice(0,QTY);
+    renderQuestion();
+    addMsg(`👋 你好！我是 AI 助教，陪你完成 ${LABEL} 數學測驗！\n\n有任何不懂的地方，隨時問我 😊`,'ai');
+  }catch(e){
+    questions=getLocalQuestions(GRADE,QTY);
+    renderQuestion();
+    addMsg(`準備好了！（使用內建題庫）有問題盡管問我 😊`,'ai');
+  }
+}
+function getLocalQuestions(grade,qty){
+  const bank={
+    low:[
+      {q:'3 + 5 = ?',opts:['A. 7','B. 8','C. 9','D. 6'],ans:'B',exp:'3加5等於8'},
+      {q:'10 - 4 = ?',opts:['A. 5','B. 7','C. 6','D. 4'],ans:'C',exp:'10減4等於6'},
+      {q:'2 × 3 = ?',opts:['A. 5','B. 7','C. 6','D. 8'],ans:'C',exp:'2乘以3等於6'},
+      {q:'12 ÷ 4 = ?',opts:['A. 2','B. 4','C. 3','D. 5'],ans:'C',exp:'12除以4等於3'},
+      {q:'5 + 7 = ?',opts:['A. 11','B. 13','C. 10','D. 12'],ans:'D',exp:'5加7等於12'},
+      {q:'20 - 8 = ?',opts:['A. 10','B. 13','C. 12','D. 11'],ans:'C',exp:'20減8等於12'},
+      {q:'4 × 4 = ?',opts:['A. 14','B. 16','C. 18','D. 12'],ans:'B',exp:'4乘以4等於16'},
+      {q:'15 ÷ 3 = ?',opts:['A. 4','B. 6','C. 5','D. 3'],ans:'C',exp:'15除以3等於5'},
+      {q:'6 + 9 = ?',opts:['A. 14','B. 16','C. 13','D. 15'],ans:'D',exp:'6加9等於15'},
+      {q:'1/2 + 1/2 = ?',opts:['A. 1/4','B. 2/4','C. 1','D. 2'],ans:'C',exp:'同分母相加，1/2+1/2=1'},
+    ],
+    mid:[
+      {q:'(-3) + 5 = ?',opts:['A. -8','B. 2','C. 8','D. -2'],ans:'B',exp:'-3加5，正數較大，結果為+2'},
+      {q:'2x + 3 = 7，x = ?',opts:['A. 1','B. 3','C. 2','D. 5'],ans:'C',exp:'2x=4，x=2'},
+      {q:'|-5| = ?',opts:['A. -5','B. 0','C. 5','D. 25'],ans:'C',exp:'絕對值恆正，|-5|=5'},
+      {q:'3² = ?',opts:['A. 6','B. 9','C. 8','D. 12'],ans:'B',exp:'3的平方=3×3=9'},
+      {q:'一角30°，餘角為？',opts:['A. 150°','B. 330°','C. 60°','D. 120°'],ans:'C',exp:'餘角=90°-30°=60°'},
+      {q:'√16 = ?',opts:['A. 4','B. 8','C. 2','D. 6'],ans:'A',exp:'4×4=16，√16=4'},
+      {q:'y = 2x + 1，x=3時 y = ?',opts:['A. 5','B. 7','C. 8','D. 6'],ans:'B',exp:'y=2(3)+1=7'},
+      {q:'(x+2)(x-2) = ?',opts:['A. x²-4','B. x²+4','C. x²-2x-4','D. x²+2x-4'],ans:'A',exp:'平方差公式：(a+b)(a-b)=a²-b²'},
+      {q:'三角形內角和為？',opts:['A. 90°','B. 270°','C. 360°','D. 180°'],ans:'D',exp:'三角形三個內角之和為180°'},
+      {q:'3/4 × 8 = ?',opts:['A. 4','B. 8','C. 6','D. 5'],ans:'C',exp:'3/4×8=24/4=6'},
+    ],
+    high:[
+      {q:'log₂8 = ?',opts:['A. 2','B. 3','C. 4','D. 8'],ans:'B',exp:'2³=8，log₂8=3'},
+      {q:'sin(90°) = ?',opts:['A. 0','B. -1','C. 1','D. 0.5'],ans:'C',exp:'sin(90°)=1為基本三角值'},
+      {q:'x²-5x+6=0，x解為？',opts:['A. 2,3','B. 1,6','C. -2,-3','D. 2,-3'],ans:'A',exp:'(x-2)(x-3)=0，x=2或3'},
+      {q:'C(5,2) = ?',opts:['A. 10','B. 20','C. 25','D. 5'],ans:'A',exp:'C(5,2)=5!/(2!3!)=10'},
+      {q:'等差數列首項2公差3，第5項？',opts:['A. 12','B. 14','C. 15','D. 17'],ans:'B',exp:'a₅=2+(5-1)×3=14'},
+      {q:'lim(x→0) sinx/x = ?',opts:['A. 0','B. ∞','C. 1','D. x'],ans:'C',exp:'此為重要極限，結果為1'},
+      {q:'cos(60°) = ?',opts:['A. √3/2','B. 1/2','C. √2/2','D. 1'],ans:'B',exp:'cos(60°)=1/2為基本值'},
+      {q:'P(5,2) = ?',opts:['A. 10','B. 20','C. 30','D. 60'],ans:'B',exp:'P(5,2)=5×4=20'},
+      {q:'e^0 = ?',opts:['A. 0','B. e','C. 1','D. ∞'],ans:'C',exp:'任何數的0次方等於1'},
+      {q:'tan(45°) = ?',opts:['A. 0','B. √3','C. 1','D. √2/2'],ans:'C',exp:'tan(45°)=sin/cos=1'},
+    ]
+  };
+  const pool=grade<=4?bank.low:grade<=9?bank.mid:bank.high;
+  const result=[];while(result.length<qty)result.push(...pool);
+  return result.sort(()=>Math.random()-.5).slice(0,qty);
+}
+function renderQuestion(){
+  answered=false;const q=questions[current];if(!q)return;
+  const pct=(current/questions.length)*100;
+  document.getElementById('progFill').style.width=pct+'%';
+  document.getElementById('progTxt').textContent=`${current+1}/${questions.length}`;
+  document.getElementById('quizPanel').innerHTML=`
+    <div class="q-header"><div class="q-num">第 ${current+1} 題 / 共 ${questions.length} 題</div><div class="q-score-badge">✓ ${score} 分</div></div>
+    <div class="q-card">
+      <div class="q-text">${q.q}</div>
+      <div class="options" id="opts">
+        ${q.opts.map((o,i)=>`<button class="opt-btn" data-idx="${i}" onclick="selectOpt(${i})"><div class="opt-label">${String.fromCharCode(65+i)}</div><span>${o.replace(/^[A-D]\.\s*/,'')}</span></button>`).join('')}
+      </div>
+      <div class="explanation" id="expBox"><div class="exp-title">📖 解析</div><div id="expText"></div></div>
+    </div>
+    <div class="action-row"><button class="next-btn" id="nextBtn" onclick="nextQuestion()">${current<questions.length-1?'下一題 →':'查看成績 →'}</button></div>`;
+}
+window.selectOpt=function(idx){
+  if(answered)return;answered=true;
+  const q=questions[current];const ci=q.ans.charCodeAt(0)-65;const ok=idx===ci;
+  if(ok)score++;
+  document.querySelectorAll('.opt-btn').forEach((b,i)=>{b.disabled=true;if(i===ci)b.classList.add('correct');if(i===idx&&!ok)b.classList.add('wrong');});
+  document.getElementById('expText').textContent=q.exp;
+  document.getElementById('expBox').classList.add('show');
+  document.getElementById('nextBtn').classList.add('show');
+  if(GROQ_KEY&&!ok){addMsg(`❌ 答錯了！正確答案是 ${q.ans}。\n${q.exp}\n\n還有不懂的地方可以問我 😊`,'ai');}
+  else if(ok&&score%3===0&&score>0){addMsg(`✅ 答對！做得很好 🎉`,'ai');}
+};
+window.nextQuestion=function(){if(current<questions.length-1){current++;renderQuestion();}else{finishQuiz();}};
+async function finishQuiz(){
+  clearInterval(timerInterval);
+  const elapsed=Math.floor((Date.now()-startTime)/1000);
+  const accuracy=Math.round((score/questions.length)*100);
+  try{await addDoc(collection(db,'quiz_results'),{grade:GRADE,gradeLabel:LABEL,totalQuestions:questions.length,correctCount:score,accuracy,elapsedSeconds:elapsed,model:MODEL,timestamp:serverTimestamp()});}catch(e){console.error(e);}
+  location.href=`results.html?score=${score}&total=${questions.length}&elapsed=${elapsed}&label=${encodeURIComponent(LABEL)}&accuracy=${accuracy}`;
+}
+window.goHome=function(){if(confirm('確定要離開測驗嗎？'))location.href='index.html';};
+function addMsg(text,role){
+  const box=document.getElementById('aiMessages');
+  const div=document.createElement('div');div.className=`msg ${role}`;
+  div.innerHTML=text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+  const t=document.createElement('div');t.className='msg-time';t.textContent=new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+  div.appendChild(t);box.appendChild(div);box.scrollTop=box.scrollHeight;
+}
+function getCtx(){const q=questions[current];if(!q)return'';return `當前題目：「${q.q}」\n正確答案：${q.ans}（${q.exp})`;}
+window.sendToAI=async function(){
+  const input=document.getElementById('aiInput');const text=input.value.trim();if(!text)return;
+  input.value='';addMsg(text,'user');
+  if(!GROQ_KEY){addMsg('⚠️ 請先設定 Groq API Key 才能使用 AI 功能。','ai');return;}
+  const btn=document.getElementById('aiSendBtn');btn.disabled=true;
+  addMsg('⋯ 思考中...','ai typing');
+  chatHistory.push({role:'user',content:text});
+  try{
+    const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${GROQ_KEY}`},body:JSON.stringify({model:MODEL,messages:[{role:'system',content:`你是台灣數學家教，陪學生做${LABEL}數學測驗。${getCtx()}\n請用繁體中文，口語化回答，不超過150字。`},...chatHistory.slice(-6)],temperature:0.5,max_tokens:400})});
+    const data=await res.json();if(data.error)throw new Error(data.error.message);
+    const reply=data.choices[0].message.content;chatHistory.push({role:'assistant',content:reply});
+    document.querySelector('.typing')?.remove();addMsg(reply,'ai');
+  }catch(e){document.querySelector('.typing')?.remove();addMsg(`❌ 連線失敗：${e.message}`,'ai');}
+  finally{btn.disabled=false;}
+};
+window.quickAsk=function(t){document.getElementById('aiInput').value=t;sendToAI();};
+window.handleKey=function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendToAI();}};
+generateQuestions();
+</script>
+</body>
+</html>
