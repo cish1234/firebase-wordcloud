@@ -103,7 +103,7 @@
   </div>
   <div class="ai-no-key" id="noKeyBanner" style="display:none">
     ⚠️ 未設定 Groq API Key，AI 功能停用。<br>
-    返回首頁點 ⚙️ 設定，或前往 <a href="https://console.groq.com/keys" target="_blank">console.groq.com</a> 取得免費 Key。
+    返回首頁點 ⚙️ 設定您的 OpenAI API Key，才能使用 AI 出題與問答功能。
   </div>
   <div class="ai-messages" id="aiMessages"></div>
   <div class="ai-input-area">
@@ -128,12 +128,12 @@ const params=new URLSearchParams(location.search);
 const GRADE=parseInt(params.get('grade')||'1');
 const LABEL=params.get('label')||'小一';
 const QTY=parseInt(params.get('qty')||'10');
-const MODEL=params.get('model')||'llama-3.3-70b-versatile';
+const MODEL=params.get('model')||'openai/gpt-oss-120b';
 const GROQ_KEY=localStorage.getItem('groq_api_key')||'';
 let questions=[],current=0,score=0,answered=false,startTime=Date.now(),timerInterval,chatHistory=[];
 document.getElementById('quizTitle').textContent=`${LABEL} 數學測驗`;
 document.getElementById('quizSub').textContent=`共 ${QTY} 題`;
-const shortModel=MODEL.split('/').pop().replace(/-instruct|-versatile/g,'');
+const shortModel=MODEL.includes('gpt-oss-120b')?'GPT-OSS 120B':MODEL.includes('gpt-oss-20b')?'GPT-OSS 20B':MODEL.split('/').pop().replace(/-instruct|-versatile/g,'');
 document.getElementById('modelTag').textContent=shortModel;
 if(!GROQ_KEY)document.getElementById('noKeyBanner').style.display='block';
 timerInterval=setInterval(()=>{const sec=Math.floor((Date.now()-startTime)/1000);const m=String(Math.floor(sec/60)).padStart(2,'0');const s=String(sec%60).padStart(2,'0');document.getElementById('timerSpan').textContent=`${m}:${s}`;},1000);
@@ -144,7 +144,7 @@ async function generateQuestions(){
   try{
     let qs;
     if(GROQ_KEY){
-      const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${GROQ_KEY}`},body:JSON.stringify({model:MODEL,messages:[{role:'user',content:prompt}],temperature:0.7,max_tokens:3000})});
+      const res=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${GROQ_KEY}`},body:JSON.stringify({model:MODEL,messages:[{role:'user',content:prompt}],temperature:0.7,max_tokens:3000})});
       const data=await res.json();
       if(data.error)throw new Error(data.error.message);
       const raw=data.choices[0].message.content;
@@ -250,7 +250,7 @@ function getCtx(){const q=questions[current];if(!q)return'';return `當前題目
 window.sendToAI=async function(){
   const input=document.getElementById('aiInput');const text=input.value.trim();if(!text)return;
   input.value='';addMsg(text,'user');
-  if(!GROQ_KEY){addMsg('⚠️ 請先設定 Groq API Key 才能使用 AI 功能。','ai');return;}
+  if(!GROQ_KEY){addMsg('⚠️ 請先設定 OpenAI API Key 才能使用 AI 功能（首頁 ⚙️ 設定）。','ai');return;}
   const btn=document.getElementById('aiSendBtn');btn.disabled=true;
   addMsg('⋯ 思考中...','ai typing');
   chatHistory.push({role:'user',content:text});

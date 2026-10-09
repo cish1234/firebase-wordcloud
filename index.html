@@ -113,11 +113,8 @@
     <div class="setting-item">
       <label>AI 模型</label>
       <select id="modelSelect">
-        <option value="llama-3.3-70b-versatile" selected>Llama 3.3 70B（均衡）</option>
-        <option value="meta-llama/llama-4-scout-17b-16e-instruct">Llama 4 Scout 17B（快）</option>
-        <option value="meta-llama/llama-4-maverick-17b-128e-instruct">Llama 4 Maverick（強）</option>
-        <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
-        <option value="llama3-70b-8192">Llama 3 70B</option>
+        <option value="openai/gpt-oss-120b" selected>GPT-OSS 120B（強大）</option>
+        <option value="openai/gpt-oss-20b">GPT-OSS 20B（快速）</option>
       </select>
     </div>
   </div>
@@ -142,22 +139,20 @@
 <div class="overlay" id="overlay" onclick="closeOnBg(event)">
   <div class="modal">
     <h2>⚙️ Groq API Key 設定</h2>
-    <p>前往 <a class="groq-link" href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a> 免費取得 API Key，即可啟用 AI 出題與即時問答功能。<br><br>Key 只儲存在您的瀏覽器 localStorage，不會傳送至任何伺服器。</p>
+    <p>輸入您的 OpenAI API Key，即可啟用 AI 自動出題與即時問答功能。<br><br>Key 只儲存在您的瀏覽器 localStorage，不會傳送至任何伺服器。輸入後點「儲存並測試」會自動驗證連線。</p>
     <div class="api-status">
       <div class="dot" id="apiDot"></div>
       <span id="apiStatusTxt">尚未設定</span>
     </div>
-    <input type="password" id="keyInput" placeholder="gsk_..." autocomplete="off">
+    <input type="password" id="keyInput" placeholder="sk-..." autocomplete="off">
     <label class="model-select-label">AI 模型</label>
     <select id="modalModelSelect" style="width:100%;margin-bottom:14px">
-      <option value="llama-3.3-70b-versatile" selected>Llama 3.3 70B（均衡推薦）</option>
-      <option value="meta-llama/llama-4-scout-17b-16e-instruct">Llama 4 Scout 17B（快速）</option>
-      <option value="meta-llama/llama-4-maverick-17b-128e-instruct">Llama 4 Maverick 128E（強大）</option>
-      <option value="mixtral-8x7b-32768">Mixtral 8x7B（多語言）</option>
-      <option value="llama3-70b-8192">Llama 3 70B（穩定）</option>
+      <option value="openai/gpt-oss-120b" selected>GPT-OSS 120B（MoE 大模型）</option>
+      <option value="openai/gpt-oss-20b">GPT-OSS 20B（MoE 中型模型）</option>
     </select>
+    <div id="testResult" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:8px;font-size:.82rem"></div>
     <div class="modal-btns">
-      <button class="btn-save" onclick="saveKey()">儲存</button>
+      <button class="btn-save" id="saveKeyBtn" onclick="saveKey()">儲存並測試連線</button>
       <button class="btn-cancel" onclick="closeModal()">取消</button>
     </div>
   </div>
@@ -187,7 +182,7 @@ window.startQuiz=function(){
 function updateApiStatus(){
   const k=localStorage.getItem('groq_api_key');
   const dot=document.getElementById('apiDot');const txt=document.getElementById('apiStatusTxt');const fab=document.getElementById('fabBtn');
-  if(k&&k.startsWith('gsk_')){dot.className='dot set';txt.textContent='API Key 已設定 ✓';fab.className='fab set';}
+  if(k&&(k.startsWith('sk-')||k.startsWith('gsk_'))){dot.className='dot set';txt.textContent='API Key 已設定 ✓';fab.className='fab set';}
   else{dot.className='dot';txt.textContent='尚未設定 API Key';fab.className='fab';}
 }
 window.openModal=function(){
@@ -198,11 +193,37 @@ window.openModal=function(){
 };
 window.closeModal=function(){document.getElementById('overlay').classList.remove('open');};
 window.closeOnBg=function(e){if(e.target===document.getElementById('overlay'))closeModal();};
-window.saveKey=function(){
+window.saveKey=async function(){
   const v=document.getElementById('keyInput').value.trim();
-  if(v)localStorage.setItem('groq_api_key',v);
-  else localStorage.removeItem('groq_api_key');
-  updateApiStatus();closeModal();
+  const btn=document.getElementById('saveKeyBtn');
+  const resultDiv=document.getElementById('testResult');
+  if(v){
+    localStorage.setItem('groq_api_key',v);
+    btn.disabled=true;btn.textContent='測試中...';
+    resultDiv.style.display='block';
+    resultDiv.style.background='rgba(88,166,255,.08)';resultDiv.style.border='1px solid rgba(88,166,255,.2)';
+    resultDiv.style.color='var(--blue)';resultDiv.textContent='⏳ 正在測試連線...';
+    try{
+      const model=document.getElementById('modalModelSelect').value;
+      const res=await fetch('https://api.openai.com/v1/chat/completions',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+v},
+        body:JSON.stringify({model:model,messages:[{role:'user',content:'reply OK'}],max_tokens:5})
+      });
+      const data=await res.json();
+      if(data.error){throw new Error(data.error.message);}
+      resultDiv.style.background='rgba(63,185,80,.1)';resultDiv.style.border='1px solid rgba(63,185,80,.3)';
+      resultDiv.style.color='var(--green)';resultDiv.textContent='✅ 連線成功！模型：'+model;
+      updateApiStatus();
+      setTimeout(closeModal,1500);
+    }catch(e){
+      resultDiv.style.background='rgba(248,81,73,.08)';resultDiv.style.border='1px solid rgba(248,81,73,.2)';
+      resultDiv.style.color='var(--red)';resultDiv.textContent='❌ 連線失敗：'+e.message;
+    }finally{btn.disabled=false;btn.textContent='儲存並測試連線';}
+  }else{
+    localStorage.removeItem('groq_api_key');
+    updateApiStatus();closeModal();
+  }
 };
 updateApiStatus();
 async function loadStats(){
